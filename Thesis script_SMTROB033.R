@@ -141,12 +141,10 @@ ggsave("Figure_4_1_fixed.png", plot = figure_4_1, width = 10, height = 13, dpi =
 # DUNN'S TEST
 # ======================================================================
 
-# 1. Run post-hoc testing for Clarity
 cat("--- Pairwise Dunn's Test: Water Clarity ---\n")
 dunn_clarity <- dunnTest(clarity_final ~ site_label, data = clarity_plot_df, method = "bh")
 print(dunn_clarity$res %>% filter(Comparison %in% c("Blyde - Treur (Ref)", "Moremela - Treur (Ref)", "Marakalala - Mohlatsengwana (Ref)")))
 
-# 2. Run post-hoc testing for Physicochemical Variables (Looping dynamically)
 wqp_params <- c("ec", "ph", "temperature", "dissolved_oxgen_ppm")
 for (param in wqp_params) {
   cat(paste0("\n--- Pairwise Dunn's Test: ", toupper(param), " ---\n"))
@@ -318,6 +316,56 @@ regression_data_clean <- ms_aggregated %>%
       TRUE ~ "Unknown"
     )
   )
+######################### figure 4.4
+
+build_scatter_panel <- function(df, x_var, x_label) {
+  # Dynamically calculate a slight jitter width based on the range of the x variable
+  x_range <- max(df[[deparse(substitute(x_var))]], na.rm = TRUE) - 
+    min(df[[deparse(substitute(x_var))]], na.rm = TRUE)
+  jit_width <- x_range * 0.02 
+  
+  ggplot(df, aes(x = {{x_var}}, y = average_score)) +
+    geom_point(aes(fill = Disturbance), shape = 21, size = 2.2, alpha = 0.6, color = "black",
+               position = position_jitter(width = jit_width, height = 0)) +
+    geom_smooth(method = "lm", color = "red", linetype = "solid", linewidth = 0.8, se = FALSE) +
+    scale_fill_manual(values = custom_colors) + # Uses the color palette from your Objective 3 / Objective 1
+    labs(x = x_label, y = "miniSASS score") +
+    theme_bw(base_size = 11) +
+    theme(
+      axis.title.x     = element_text(face = "bold", size = 10, margin = margin(t = 6)),
+      axis.title.y     = element_text(face = "bold", size = 10, margin = margin(r = 6)),
+      axis.text        = element_text(size = 9, color = "black"),
+      legend.position  = "none",
+      panel.grid.minor = element_blank()
+    )
+}
+
+p_44_a <- build_scatter_panel(regression_data_clean, clarity_final, "Clarity tube measurement (cm)")
+p_44_b <- build_scatter_panel(regression_data_clean, ec, "Electrical Conductivity (uS/cm)")
+p_44_c <- build_scatter_panel(regression_data_clean, ph, "pH measurement")
+p_44_d <- build_scatter_panel(regression_data_clean, temperature, "Temperature (°C)")
+p_44_e <- build_scatter_panel(regression_data_clean, dissolved_oxgen_ppm, "Dissolved oxygen (ppm)")
+
+layout_44 <- "
+  AB
+  CD
+  EE
+"
+
+figure_4_4 <- p_44_a + p_44_b + p_44_c + p_44_d + p_44_e + 
+  plot_layout(design = layout_44) +
+  plot_annotation(
+    title = "Figure 4.4: Relationships between individual physicochemical parameters and miniSASS scores",
+    tag_levels = 'a', 
+    tag_prefix = '(', 
+    tag_suffix = ')'
+  ) & 
+  theme(
+    plot.title = element_text(face = "bold", size = 11, hjust = 0.5, margin = margin(b = 10)),
+    plot.tag   = element_text(face = "bold", size = 12)
+  )
+
+ggsave("Figure_4_4_bivariate_relationships3.png", plot = figure_4_4, width = 10, height = 13, dpi = 300)
 
 ##### Ordinary Least-Squares Multiple Linear Regression #####
   
